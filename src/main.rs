@@ -1,17 +1,19 @@
 fn main() {
     println!("Hello, world!");
+
+    let builder = GoBuilder {
+        file: String::from("cmd/foo/main.go"),
+    };
+
+    match builder.build(String::from("linux"), OS::NetBSD, Arch::Arm64(Arm64::V6)) {
+        Ok(build) => println!("{:?}", build),
+        Err(_) => println!("boom"),
+    };
 }
 
+#[derive(Debug)]
 pub struct Build {
-    pub target: String,
-}
-
-impl Default for Build {
-    fn default() -> Self {
-        Self {
-            target: String::from("target"),
-        }
-    }
+    pub command: String,
 }
 
 pub struct Error;
@@ -22,12 +24,12 @@ pub struct Publish;
 
 pub enum Arch {
     Amd64,
-    I386,
-    Aarch64(Arm),
-    Aarch32,
+    X86,
+    Arm64(Arm64),
+    Arm,
 }
 
-pub enum Arm {
+pub enum Arm64 {
     V6,
     V7,
 }
@@ -50,18 +52,28 @@ pub struct GoBuilder {
 }
 
 impl Builder for GoBuilder {
-    fn build(&self, _: String, os: OS, _: Arch) -> Result<Build, Error> {
-        let _os = match os {
-            OS::Linux => "GOOS=linux",
-            OS::Windows => "GOOS=windows",
-            OS::Darwin => "GOOS=darwin",
-            OS::FreeBSD => "GOOS=freebsd",
-            OS::OpenBSD => "GOOS=openbsd",
-            OS::NetBSD => "GOOS=netbsd",
+    fn build(&self, _: String, os: OS, arch: Arch) -> Result<Build, Error> {
+        let os_str = match os {
+            OS::Linux => "linux",
+            OS::Windows => "windows",
+            OS::Darwin => "darwin",
+            OS::FreeBSD => "freebsd",
+            OS::OpenBSD => "openbsd",
+            OS::NetBSD => return Err(Error),
         };
 
-        println!("{}", _os);
+        let arch_str = match arch {
+            Arch::Amd64 => "amd64",
+            Arch::X86 => "386",
+            Arch::Arm => "arm",
+            Arch::Arm64(v) => match v {
+                Arm64::V6 => "arm64",
+                Arm64::V7 => "arm64",
+            },
+        };
 
-        Ok(Build::default())
+        Ok(Build {
+            command: format!("GOOS={} GOARCH={} go build {}", os_str, arch_str, self.file),
+        })
     }
 }
