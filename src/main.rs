@@ -2,6 +2,7 @@ fn main() {
     let builder = GoBuilder {};
 
     let opts = BuildOptions {
+        version: None,
         work_dir: None,
         id: String::from("linux"),
         os: OS::Windows,
@@ -20,7 +21,7 @@ fn main() {
 
 #[derive(Debug)]
 pub struct Build {
-    pub command: String,
+    pub script: String,
     pub target: String,
 }
 
@@ -65,6 +66,7 @@ pub struct GoBuilder {}
 
 #[derive(Debug)]
 pub struct BuildOptions {
+    pub version: Option<String>,
     pub work_dir: Option<String>,
     pub id: String,
     pub target: String,
@@ -97,34 +99,34 @@ impl Builder for GoBuilder {
             Arch::Arm64(_) => "arm64",
         };
 
-        let mut build_target = format!("{}_{}_{}", opts.target, build_os, build_arch);
+        let mut build_dst = format!("{}_{}_{}", opts.target, build_os, build_arch);
 
         if let OS::Windows = opts.os {
-            build_target = format!("{}.exe", build_target)
+            build_dst = format!("{}.exe", build_dst)
         }
 
         if let Some(s) = &opts.teardown {
             println!("{}", s);
         }
 
-        let mut build_file = String::from("main.go");
+        let mut build_src = String::from("main.go");
 
         if let Some(files) = &opts.files {
             if files.len() != 0 {
-                build_file = String::from("");
-            }
+                build_src = String::from("");
 
-            for file in files {
-                build_file = format!("{} {}", build_file, file)
+                for file in files {
+                    build_src = format!("{} {}", build_src, file)
+                }
             }
         }
 
         Ok(Build {
-            command: format!(
+            script: format!(
                 "GOOS={} GOARCH={} go build -o {} {}",
-                build_os, build_arch, build_target, build_file
+                build_os, build_arch, build_dst, build_src
             ),
-            target: build_target,
+            target: build_dst,
         })
     }
 }
